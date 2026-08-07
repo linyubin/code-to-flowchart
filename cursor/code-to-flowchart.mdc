@@ -17,7 +17,7 @@ Turn a function's real branching logic into a Mermaid `flowchart TD` that a read
    - every error-handling boundary (`try`/`catch`, `except`, an `err != nil`/`Result` check, `panic`/`recover`, etc.) and what happens on failure
    Skip pure logging statements and no-op lines — they add nodes without adding understanding.
 
-3. **Group into named steps.** Don't emit one node per source line. Collapse a straight-line run of statements that serves one purpose (e.g. "parse input", "look up record by key") into a single labeled node named for *what* it accomplishes, not *how*. A 500-line function should produce ~15-30 nodes, not 500.
+3. **Group into named steps.** Don't emit one node per source line. Collapse a straight-line run of statements that serves one purpose (e.g. "parse input", "look up record by key") into a single labeled node named for *what* it accomplishes, not *how*. Node count should scale with complexity, not line count: a 500-line function might collapse to ~15-30 nodes, a 50-line function to far fewer.
 
 4. **Render as Mermaid.** Use `flowchart TD`:
    - process steps: `A[Do the thing]`
