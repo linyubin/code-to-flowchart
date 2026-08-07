@@ -1,11 +1,11 @@
 # code-to-flowchart
 
-A [Claude Code](https://claude.com/claude-code) skill that traces a function's real control flow — branches, decisions, error paths — and turns it into a Mermaid flowchart. Built to explain a 500-line, cyclomatic-complexity-85 C# method to engineers who shouldn't have to read it line by line to understand what it does.
+A [Claude Code](https://claude.com/claude-code) skill that traces a function's real control flow — branches, decisions, error paths — and turns it into a Mermaid flowchart. Language-agnostic: works the same on a 500-line, high-complexity method in C#, Python, Go, Java, Rust, JS, or anything else with branches and error handling. Built to explain that kind of method to a team without making everyone read it line by line — useful any time you need to understand or communicate what a piece of code actually does, not just for people new to the codebase.
 
 Unlike asking a model to "just draw a diagram of this code," the skill enforces a fixed process:
 - trace every decision point and side effect, in order
-- collapse straight-line logic into named steps instead of one node per line (~15-30 nodes for a 500-line method, not 500)
-- keep error/exception paths visible instead of merging them into the happy path
+- collapse straight-line logic into named steps instead of one node per line (~15-30 nodes for a 500-line function, not 500)
+- keep error/failure paths visible instead of merging them into the happy path
 - write a plain Markdown file with a fenced `mermaid` block — renders natively on GitHub, GitLab, and in most editors, no extra tooling needed
 
 ## Install
