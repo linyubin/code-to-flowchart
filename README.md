@@ -27,6 +27,12 @@ It's a model-invoked skill (no `disable-model-invocation` flag), so Claude Code 
 
 produces `docs/diagrams/Process-flowchart.md` with a Mermaid diagram tracing every `if`/`else`, DB/IO call, and catch block in that method, grouped into named steps.
 
+### Before / after
+
+[`examples/before/OrderImportWorker.cs`](examples/before/OrderImportWorker.cs) is a representative "god method" — a polling timer handler with a device-connectivity check, a presence check, and a duplicated old-format/new-format branch, the same shape you'll find in most legacy polling services regardless of language.
+
+[`examples/after/OrderImportWorker-flowchart.md`](examples/after/OrderImportWorker-flowchart.md) is what the skill produces from it: a ~30-node Mermaid flowchart that makes the branch duplication and every error/no-action path visible at a glance, instead of something you have to trace through 200+ lines to understand.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
