@@ -9,7 +9,7 @@ Turns a function's real branching logic into a Mermaid `flowchart TD` that a rea
 
 ## Steps
 
-1. **Identify the target function(s).** If the project has codebase-memory indexed, use `trace_path`/`get_code_snippet` to pull the exact source. Otherwise `Read`/`Grep` the file directly. Confirm with the user which function/entry point is in scope if it isn't obvious from context.
+1. **Identify the target function(s).** If a code-graph or indexing tool is available in this environment, use it to pull the exact source. Otherwise read/search the file directly with whatever file tools you have. Confirm with the user which function/entry point is in scope if it isn't obvious from context.
 
 2. **Trace the control flow top to bottom.** Walk the function and record, in order:
    - every decision point (`if`/`else`, `switch`/`match`, loop condition, early return)
@@ -26,7 +26,7 @@ Turns a function's real branching logic into a Mermaid `flowchart TD` that a rea
    - error/failure paths: route through a visually distinct branch (e.g. prefix label `Error:` or a dedicated `classDef error` style) rather than interleaving them invisibly with the happy path
    For a very large or high-complexity function, produce a high-level diagram of named steps first; only add a second, more detailed diagram for a specific branch if the user asks for it.
 
-5. **Write the output to a file**, not an Artifact, as a `.md` with a fenced ```mermaid block. Default path: `docs/diagrams/<function-or-service-name>-flowchart.md` in the target project (create the folder if missing) — unless the user names a different location. Add one sentence above the fence naming the source file/function the diagram was traced from, so it doesn't go stale silently.
+5. **Write the output to a plain file**, not a hosted preview/canvas the tool might offer, as a `.md` with a fenced ```mermaid block. Default path: `docs/diagrams/<function-or-service-name>-flowchart.md` in the target project (create the folder if missing) — unless the user names a different location. Add one sentence above the fence naming the source file/function the diagram was traced from, so it doesn't go stale silently.
 
 ## Completion criterion
 

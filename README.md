@@ -1,6 +1,6 @@
 # code-to-flowchart
 
-A [Claude Code](https://claude.com/claude-code) skill that traces a function's real control flow — branches, decisions, error paths — and turns it into a Mermaid flowchart. Language-agnostic: works the same on a 500-line, high-complexity method in C#, Python, Go, Java, Rust, JS, or anything else with branches and error handling. Built to explain that kind of method to a team without making everyone read it line by line — useful any time you need to understand or communicate what a piece of code actually does, not just for people new to the codebase.
+An AI coding agent skill that traces a function's real control flow — branches, decisions, error paths — and turns it into a Mermaid flowchart. Language-agnostic: works the same on a 500-line, high-complexity method in C#, Python, Go, Java, Rust, JS, or anything else with branches and error handling. Built to explain that kind of method to a team without making everyone read it line by line — useful any time you need to understand or communicate what a piece of code actually does, not just for people new to the codebase.
 
 Unlike asking a model to "just draw a diagram of this code," the skill enforces a fixed process:
 - trace every decision point and side effect, in order
@@ -10,14 +10,27 @@ Unlike asking a model to "just draw a diagram of this code," the skill enforces 
 
 ## Install
 
-Copy `SKILL.md` into a `code-to-flowchart/` folder under your Claude Code personal skills directory:
+`SKILL.md` follows the [Agent Skills standard](https://github.com/anthropics/skills), so the same file works unmodified across every tool that supports it:
+
+**Claude Code, Codex, Vibe, Amp, GitHub Copilot CLI**
 
 ```bash
-mkdir -p ~/.claude/skills/code-to-flowchart
+mkdir -p ~/.claude/skills/code-to-flowchart   # or ~/.codex/skills/... , ~/.vibe/skills/...
 cp SKILL.md ~/.claude/skills/code-to-flowchart/SKILL.md
 ```
 
-It's a model-invoked skill (no `disable-model-invocation` flag), so Claude Code will pick it up automatically when you ask to visualize code, map a control flow, or explain a branchy function — no slash command needed. You can also invoke it explicitly.
+It's a model-invoked skill (no `disable-model-invocation` flag), so the agent picks it up automatically when you ask to visualize code, map a control flow, or explain a branchy function — no slash command needed. You can also invoke it explicitly.
+
+**Cursor**
+
+Cursor doesn't read `SKILL.md` — it uses its own project-scoped rules format. Use [`cursor/code-to-flowchart.mdc`](cursor/code-to-flowchart.mdc) instead:
+
+```bash
+mkdir -p .cursor/rules
+cp cursor/code-to-flowchart.mdc .cursor/rules/code-to-flowchart.mdc
+```
+
+Same steps and completion criterion, translated to Cursor's rule frontmatter.
 
 ## Example
 
