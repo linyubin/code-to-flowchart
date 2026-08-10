@@ -42,9 +42,127 @@ produces `docs/diagrams/Process-flowchart.md` with a Mermaid diagram tracing eve
 
 ### Before / after
 
-[`examples/before/OrderImportWorker.cs`](examples/before/OrderImportWorker.cs) is a representative "god method": a polling timer handler with a device-connectivity check, a presence check, and a duplicated old-format/new-format branch. Same shape you'll find in most legacy polling services, regardless of language.
+**Before**: [`examples/before/OrderImportWorker.cs`](examples/before/OrderImportWorker.cs) — a representative "god method": a self-re-arming polling timer handler with a device-connectivity check, a presence check, and a duplicated old-format/new-format branch. Same shape you'll find in most legacy polling services, regardless of language. Full file is 235 lines; most of the difference is near-per-statement `try/catch` blocks, omitted below for readability:
 
-[`examples/after/OrderImportWorker-flowchart.md`](examples/after/OrderImportWorker-flowchart.md) is what the skill produces from it: a ~30-node Mermaid flowchart that makes the branch duplication and every error/no-action path visible at a glance, instead of something you have to trace through 200+ lines to understand.
+```csharp
+public void ProcessNextBatch(object sender, EventArgs args)
+{
+    try
+    {
+        _pollTimer.Stop();
+        var config = ConfigRepository.GetWatcherConfigByName("INCOMING_ORDERS");
+        _pingStatus = CheckWatcherPing();
+
+        if (_pingStatus == true)
+        {
+            if (config != null)
+            {
+                _connection = ConnectToWatcher(config.WatcherUrl);
+
+                if (_connection != null && _connection.State == "CONNECTED")
+                {
+                    string newFileFlag = ReadFlag("NEW_FILE_AVAILABLE");
+
+                    if (newFileFlag == "True")
+                    {
+                        string rawLine = ReadFlag("ORDER_LINE").Trim();
+
+                        if (rawLine.Length > 25 && rawLine != "ERROR")
+                        {
+                            // ---- New / extended format: split into 6 fields, look up
+                            // existing order, insert or update, write processed flag ----
+                        }
+                        else if (rawLine.Length < 25)
+                        {
+                            // ---- Old / legacy format: same lookup/insert/update shape,
+                            // fewer fields, different placeholder defaults ----
+                        }
+                    }
+                    else
+                    {
+                        // No new file — reset the processed flag if it's stuck set.
+                    }
+                }
+            }
+        }
+    }
+    finally
+    {
+        _pollTimer.Start(); // always restarts, regardless of which path was taken
+    }
+}
+```
+
+**After**: the skill traces every branch above — including the two collapsed format-handling blocks — into this:
+
+```mermaid
+flowchart TD
+    Start(["Timer elapses (every 1s)"]) --> StopTimer["Stop polling timer"]
+    StopTimer --> FetchConfig["Fetch watcher config from DB by name"]
+    FetchConfig --> CheckPing{"Watcher ping successful?"}
+    CheckPing -->|No| Finally
+    CheckPing -->|Yes| HasConfig{"Watcher config found?"}
+    HasConfig -->|No| Finally
+    HasConfig -->|Yes| Connect["Connect to file watcher"]
+    Connect --> IsConnected{"Watcher connected?"}
+    IsConnected -->|No| Finally
+    IsConnected -->|Yes| ReadFlag1["Read 'new file available' flag"]
+    ReadFlag1 --> FilePresent{"New file present?"}
+
+    FilePresent -->|No| ReadProcessed1["Read 'order processed' flag"]
+    ReadProcessed1 --> ProcTrue1{"Processed flag = True?"}
+    ProcTrue1 -->|Yes| ResetFlag["Write processed flag = False"]
+    ProcTrue1 -->|No| NoAction1["No action - already reset"]
+    ResetFlag --> Finally
+    NoAction1 --> Finally
+
+    FilePresent -->|Yes| ReadLine["Read raw order line"]
+    ReadLine --> Format{"Line length?"}
+
+    subgraph New["New / extended format path (length > 25)"]
+        Format -->|"> 25 chars"| ParseNew["Split line into 6 fields: orderId / customerId / qty / date / reference / batch"]
+        ParseNew --> LookupNew["Generate import batch ID, look up existing order by orderId"]
+        LookupNew --> FoundNew{"Order already exists?"}
+        FoundNew -->|No| InsertNew["Insert new order row - status PENDING"]
+        FoundNew -->|Yes| ReadProcNew["Read processed flag"]
+        ReadProcNew --> ProcFalseNew{"Processed = False?"}
+        ProcFalseNew -->|No| SkipNew["No action - already processed"]
+        ProcFalseNew -->|Yes| ImportGenNew{"Import already generated?"}
+        ImportGenNew -->|Yes| SkipNew2["No action - already generated"]
+        ImportGenNew -->|No| LookupCustomer["Look up customer profile by customerId"]
+        LookupCustomer --> UpdateNew["Update order row: customer/qty/batch, status COMPLETE"]
+        UpdateNew --> WriteProcNew["Write processed flag = True"]
+    end
+
+    subgraph Old["Old / legacy format path (length < 25)"]
+        Format -->|"< 25 chars"| LookupOld["Generate import batch ID, look up existing order by raw line"]
+        LookupOld --> FoundOld{"Order already exists?"}
+        FoundOld -->|No| InsertOld["Insert new order row - status COMPLETE, placeholder customer UNKNOWN / legacy-import / GEN"]
+        FoundOld -->|Yes| ReadProcOld["Read processed flag"]
+        ReadProcOld --> ProcFalseOld{"Processed = False?"}
+        ProcFalseOld -->|No| SkipOld["No action - already processed"]
+        ProcFalseOld -->|Yes| ImportGenOld{"Import already generated?"}
+        ImportGenOld -->|Yes| SkipOld2["No action - already generated"]
+        ImportGenOld -->|No| UpdateOld["Update order row: import batch ID only"]
+        UpdateOld --> WriteProcOld["Write processed flag = True"]
+    end
+
+    InsertNew --> Finally
+    SkipNew --> Finally
+    SkipNew2 --> Finally
+    WriteProcNew --> Finally
+    InsertOld --> Finally
+    SkipOld --> Finally
+    SkipOld2 --> Finally
+    WriteProcOld --> Finally
+
+    Finally(["Restart poll timer (always runs)"])
+
+    classDef noAction fill:#552222,stroke:#ff6666,color:#fff
+    class NoAction1,SkipNew,SkipNew2,SkipOld,SkipOld2 noAction
+```
+
+235 lines of nested conditionals and duplicated logic become a 30-node diagram where the format-branch duplication and every error/no-action path are visible at a glance — no tracing required. Full source and full output: [`examples/before/OrderImportWorker.cs`](examples/before/OrderImportWorker.cs) / [`examples/after/OrderImportWorker-flowchart.md`](examples/after/OrderImportWorker-flowchart.md).
 
 ## License
 
