@@ -1,33 +1,12 @@
 ---
-description: Convert a function, method, or service's control flow — in any programming language — into a Mermaid flowchart diagram. Apply when the user wants to visualize code logic, map a control flow, turn a method into a diagram, or understand a complex/branchy function visually.
+description: Trace actual source function call graph and create function-scoped Mermaid diagrams annotated with parameter-to-variable effects and source evidence.
 alwaysApply: false
 ---
 
-# Code to Flowchart
+# code-to-flowchart — Function Scopes & Parameter Effects (Cursor)
 
-Turn a function's real branching logic into a Mermaid `flowchart TD` that a reader can follow without reading the source. Language-agnostic — talk about decisions, side effects, and error-handling boundaries as concepts, not any one language's syntax.
+Apply the complete workflow and completion gates from `SKILL.md` at the repository root. Do not apply the old single-function-only expansion heuristic.
 
-## Steps
+When asked to visualize code: inspect target function and all business-critical helpers recursively; draw an explicit `subgraph` for every expanded function; label **each** node with `P:` directly influencing parameters and `Δ:` the precise resulting variable/threshold/branch/mask or DataFrame modification. Explain parameter origins, defaulting, omitted keyword args, runtime config normalization, and source `path:line` in the ledger.
 
-1. **Identify the target function(s).** Read/search the file directly to pull the exact source. Confirm which function/entry point is in scope if it isn't obvious from context.
-
-2. **Trace the control flow top to bottom.** Walk the function and record, in order:
-   - every decision point (`if`/`else`, `switch`/`match`, loop condition, early return)
-   - every distinct action or side effect (DB call, network/IO call, external API/hardware call, state mutation)
-   - every error-handling boundary (`try`/`catch`, `except`, an `err != nil`/`Result` check, `panic`/`recover`, etc.) and what happens on failure
-   Skip pure logging statements and no-op lines — they add nodes without adding understanding.
-
-3. **Group into named steps.** Don't emit one node per source line. Collapse a straight-line run of statements that serves one purpose (e.g. "parse input", "look up record by key") into a single labeled node named for *what* it accomplishes, not *how*. Node count should scale with complexity, not line count: a 500-line function might collapse to ~15-30 nodes, a 50-line function to far fewer.
-
-4. **Render as Mermaid.** Use `flowchart TD`:
-   - process steps: `A[Do the thing]`
-   - decisions: `B{Condition?}` with labeled edges — `B -->|Yes| C`, `B -->|No| D`
-   - terminal/exit states: distinct shape, e.g. `Z([Done])`
-   - error/failure paths: route through a visually distinct branch (e.g. prefix label `Error:` or a dedicated `classDef error` style) rather than interleaving them invisibly with the happy path
-   For a very large or high-complexity function, produce a high-level diagram of named steps first; only add a second, more detailed diagram for a specific branch if asked.
-
-5. **Write the output to a plain file** as a `.md` with a fenced ```mermaid block. Default path: `docs/diagrams/<function-or-service-name>-flowchart.md` in the project (create the folder if missing) unless told otherwise. Add one sentence above the fence naming the source file/function the diagram was traced from.
-
-## Completion criterion
-
-Every decision point and named step from step 2 appears as a node; every branch out of a decision node has a labeled edge; every error/catch path is visible, not merged into the happy path. Sanity-check the Mermaid syntax (balanced `[]`/`{}`/`()`, every edge references a declared node) before writing the file.
+Produce Level 2 default depth; split into overview and detailed charts rather than collapsing algorithm helpers to bare names. Build reviewed JSON IR and run `python3 scripts/flowchart_ir.py <ir.json> --out <file.mmd> --markdown <file.md>`, then `python3 -m unittest discover -s tests -v`. Do not confuse structural checks with runtime verification.

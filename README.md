@@ -167,3 +167,7 @@ flowchart TD
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## v3: Function scopes, parameter lineage, token telemetry
+
+The fork adds a reviewed, source-pinned analysis workflow with expanded function scopes, `P:`/ `Δ:` causality annotations, an offline interactive viewer, compact IR serialization, incremental rendering and model-usage logging. See [v3 guide](docs/FUNCTION_SCOPES_README.md) and [public example](examples/sample_flow.json).

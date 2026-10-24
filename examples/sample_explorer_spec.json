@@ -1,0 +1,462 @@
+{
+  "source": {
+    "repository": "example/non-sensitive",
+    "revision": "educational-sample-v1",
+    "entry": "select_records"
+  },
+  "views": [
+    {
+      "key": "overview",
+      "title": "Score filtering · business overview",
+      "name": "select_records",
+      "purpose": "Read config, filter candidates, apply optional output cap",
+      "family": "overview",
+      "file": "examples/sample_code.py",
+      "nodes": [
+        {
+          "id": "S0",
+          "kind": "start",
+          "title": "Receive records",
+          "params": [
+            {
+              "name": "records",
+              "controls": "input sequence of candidate records"
+            }
+          ],
+          "impact": "records enter selection",
+          "source_lines": [
+            1
+          ]
+        },
+        {
+          "id": "S1",
+          "kind": "action",
+          "title": "Read threshold and size cap",
+          "params": [
+            {
+              "name": "config.min_score",
+              "controls": "threshold default 50"
+            },
+            {
+              "name": "config.max_items",
+              "controls": "cap default 0 (unlimited)"
+            }
+          ],
+          "impact": "min_score;max_items",
+          "source_lines": [
+            2,
+            3
+          ]
+        },
+        {
+          "id": "Scall",
+          "kind": "call",
+          "title": "Apply score filtering helper",
+          "params": [
+            {
+              "name": "min_score",
+              "controls": "forward threshold to select_valid(records,min_score)"
+            }
+          ],
+          "impact": "valid = select_valid(records,min_score)",
+          "source_lines": [
+            4
+          ],
+          "jump": "helper"
+        },
+        {
+          "id": "S2",
+          "kind": "decision",
+          "title": "Was selected result empty?",
+          "params": [
+            {
+              "name": "valid",
+              "controls": "empty indicates no records meet min_score"
+            }
+          ],
+          "impact": "empty_or_continue",
+          "source_lines": [
+            5
+          ]
+        },
+        {
+          "id": "S3",
+          "kind": "decision",
+          "title": "Is positive cap specified?",
+          "params": [
+            {
+              "name": "max_items",
+              "controls": "positive truncates otherwise returns all"
+            }
+          ],
+          "impact": "enable_cap",
+          "source_lines": [
+            7
+          ]
+        },
+        {
+          "id": "S5",
+          "kind": "terminal",
+          "title": "Return selected records",
+          "params": [],
+          "impact": "return valid",
+          "source_lines": [
+            9
+          ]
+        },
+        {
+          "id": "Sempty",
+          "kind": "terminal",
+          "title": "Return empty set",
+          "params": [],
+          "impact": "return []",
+          "source_lines": [
+            6
+          ]
+        }
+      ],
+      "edges": [
+        {
+          "from": "S0",
+          "to": "S1",
+          "label": "start"
+        },
+        {
+          "from": "S1",
+          "to": "Scall",
+          "label": "forward args"
+        },
+        {
+          "from": "Scall",
+          "to": "S2",
+          "label": "result"
+        },
+        {
+          "from": "S2",
+          "to": "Sempty",
+          "label": "empty"
+        },
+        {
+          "from": "S2",
+          "to": "S3",
+          "label": "nonempty"
+        },
+        {
+          "from": "S3",
+          "to": "S5",
+          "label": "uncapped"
+        },
+        {
+          "from": "S3",
+          "to": "S5",
+          "label": "capped"
+        }
+      ],
+      "stages": [
+        {
+          "title": "01 · Inputs",
+          "items": [
+            "S0",
+            "S1"
+          ]
+        },
+        {
+          "title": "02 · Filtering & decisions",
+          "items": [
+            "Scall",
+            "S2",
+            "S3"
+          ]
+        },
+        {
+          "title": "03 · Output",
+          "items": [
+            "S5",
+            "Sempty"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "main",
+      "title": "select_records",
+      "name": "select_records",
+      "purpose": "config normalization and result size cap",
+      "family": "function",
+      "file": "examples/sample_code.py",
+      "nodes": [
+        {
+          "id": "S0",
+          "kind": "start",
+          "title": "Receive records",
+          "params": [
+            {
+              "name": "records",
+              "controls": "input sequence of candidate records"
+            }
+          ],
+          "impact": "records enter selection",
+          "source_lines": [
+            1
+          ]
+        },
+        {
+          "id": "S1",
+          "kind": "action",
+          "title": "Read threshold and size cap",
+          "params": [
+            {
+              "name": "config.min_score",
+              "controls": "threshold default 50"
+            },
+            {
+              "name": "config.max_items",
+              "controls": "cap default 0 (unlimited)"
+            }
+          ],
+          "impact": "min_score;max_items",
+          "source_lines": [
+            2,
+            3
+          ]
+        },
+        {
+          "id": "Scall",
+          "kind": "call",
+          "title": "Apply score filtering helper",
+          "params": [
+            {
+              "name": "min_score",
+              "controls": "forward threshold to select_valid(records,min_score)"
+            }
+          ],
+          "impact": "valid = select_valid(records,min_score)",
+          "source_lines": [
+            4
+          ],
+          "jump": "helper"
+        },
+        {
+          "id": "S2",
+          "kind": "decision",
+          "title": "Was selected result empty?",
+          "params": [
+            {
+              "name": "valid",
+              "controls": "empty indicates no records meet min_score"
+            }
+          ],
+          "impact": "empty_or_continue",
+          "source_lines": [
+            5
+          ]
+        },
+        {
+          "id": "S3",
+          "kind": "decision",
+          "title": "Is positive cap specified?",
+          "params": [
+            {
+              "name": "max_items",
+              "controls": "positive truncates otherwise returns all"
+            }
+          ],
+          "impact": "enable_cap",
+          "source_lines": [
+            7
+          ]
+        },
+        {
+          "id": "S4",
+          "kind": "action",
+          "title": "Truncate selected records",
+          "params": [
+            {
+              "name": "max_items",
+              "controls": "result[:max_items]"
+            }
+          ],
+          "impact": "valid = valid[:max_items]",
+          "source_lines": [
+            8
+          ]
+        },
+        {
+          "id": "S5",
+          "kind": "terminal",
+          "title": "Return selected records",
+          "params": [],
+          "impact": "return valid",
+          "source_lines": [
+            9
+          ]
+        },
+        {
+          "id": "Sempty",
+          "kind": "terminal",
+          "title": "Return empty set",
+          "params": [],
+          "impact": "return []",
+          "source_lines": [
+            6
+          ]
+        }
+      ],
+      "edges": [
+        {
+          "from": "S0",
+          "to": "S1",
+          "label": "begin"
+        },
+        {
+          "from": "S1",
+          "to": "Scall",
+          "label": "call"
+        },
+        {
+          "from": "Scall",
+          "to": "S2",
+          "label": "valid"
+        },
+        {
+          "from": "S2",
+          "to": "Sempty",
+          "label": "yes"
+        },
+        {
+          "from": "S2",
+          "to": "S3",
+          "label": "no"
+        },
+        {
+          "from": "S3",
+          "to": "S4",
+          "label": "positive"
+        },
+        {
+          "from": "S3",
+          "to": "S5",
+          "label": "unlimited"
+        },
+        {
+          "from": "S4",
+          "to": "S5",
+          "label": "cap applied"
+        }
+      ]
+    },
+    {
+      "key": "helper",
+      "title": "select_valid",
+      "name": "select_valid",
+      "purpose": "filter records by score",
+      "family": "function",
+      "file": "examples/sample_code.py",
+      "nodes": [
+        {
+          "id": "V0",
+          "kind": "decision",
+          "title": "Is input sequence empty?",
+          "params": [
+            {
+              "name": "records",
+              "controls": "no items to evaluate"
+            }
+          ],
+          "impact": "skip_filter",
+          "source_lines": [
+            13
+          ]
+        },
+        {
+          "id": "V1",
+          "kind": "action",
+          "title": "Select records above threshold",
+          "params": [
+            {
+              "name": "min_score",
+              "controls": "record.score >= min_score"
+            }
+          ],
+          "impact": "valid list filters low-scoring records",
+          "source_lines": [
+            15
+          ]
+        },
+        {
+          "id": "Vempty",
+          "kind": "terminal",
+          "title": "Return empty selection",
+          "params": [],
+          "impact": "return []",
+          "source_lines": [
+            14
+          ]
+        }
+      ],
+      "edges": [
+        {
+          "from": "V0",
+          "to": "Vempty",
+          "label": "yes"
+        },
+        {
+          "from": "V0",
+          "to": "V1",
+          "label": "no"
+        }
+      ]
+    }
+  ],
+  "tracks": [
+    {
+      "key": "min_score",
+      "label": "min_score → selected records",
+      "summary": "Config threshold is forwarded to score predicate; returned selection determines the empty branch",
+      "steps": [
+        {
+          "view": "main",
+          "node": "S1",
+          "note": "Read config.min_score"
+        },
+        {
+          "view": "main",
+          "node": "Scall",
+          "note": "Forward min_score"
+        },
+        {
+          "view": "helper",
+          "node": "V1",
+          "note": "Compare record.score against threshold"
+        },
+        {
+          "view": "main",
+          "node": "S2",
+          "note": "Determine empty branch"
+        }
+      ]
+    },
+    {
+      "key": "max_items",
+      "label": "max_items → output size",
+      "summary": "A positive cap truncates selected records",
+      "steps": [
+        {
+          "view": "main",
+          "node": "S1",
+          "note": "Read config.max_items"
+        },
+        {
+          "view": "main",
+          "node": "S3",
+          "note": "Check positivity"
+        },
+        {
+          "view": "main",
+          "node": "S4",
+          "note": "Slice valid list"
+        }
+      ]
+    }
+  ]
+}
