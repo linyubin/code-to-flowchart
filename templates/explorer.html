@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Code-to-Flowchart · Offline Explorer</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI","Microsoft Yahei",sans-serif;color:#263e55;background:#f4f7fa}
+*{box-sizing:border-box}body{margin:0}.app{display:grid;grid-template-rows:auto minmax(0,1fr);height:100vh;min-height:520px}
+header{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:14px 22px;background:#fff;border-bottom:1px solid #d5e1eb}header strong{font-size:16px}header small{display:block;color:#758799;font-size:11px;margin-top:4px}
+.layout{display:grid;grid-template-columns:220px minmax(400px,1fr) 290px;min-height:0}
+nav,aside{background:#fff;overflow:auto;padding:16px;border-color:#d9e4ed}nav{border-right:1px solid #d9e4ed}aside{border-left:1px solid #d9e4ed}
+.section{color:#8598aa;font-size:10px;font-weight:700;letter-spacing:1px;margin:16px 0 9px}
+nav button{display:block;width:100%;background:transparent;border:0;text-align:left;color:#3c566f;border-radius:7px;padding:11px 9px;font-size:12px;cursor:pointer;overflow-wrap:anywhere}
+nav button:hover,nav button.active{background:#eaf4fc;color:#20577e}
+article{display:flex;flex-direction:column;gap:10px;padding:15px;min-height:0;min-width:0}
+.title{display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid #e0e9f0;border-radius:9px;padding:13px 17px;gap:12px}
+.title h2{font-size:16px;margin:0 0 5px}.title p{margin:0;color:#75899b;font-size:12px}
+.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+input,select,button{font:inherit}input,select{background:#fff;border:1px solid #d0dce6;border-radius:7px;padding:8px 9px;font-size:12px}
+button.tool{background:#fff;border:1px solid #d0dce6;border-radius:7px;padding:8px 10px;color:#395e80;cursor:pointer;font-size:12px}
+button.tool:hover{background:#eaf4fc}
+#drawing{flex:1;min-height:0;border:1px solid #d3e0e9;border-radius:10px;background:#fff;overflow:auto;position:relative;touch-action:pan-x pan-y}
+#drawing svg{display:block;width:100%;height:100%;min-height:380px}
+#drawing g.node{cursor:pointer}
+#drawing g.node.selected path,#drawing g.node.selected polygon,#drawing g.node.selected ellipse{stroke:#c57928!important;stroke-width:3!important}
+#drawing g.node.highlighted path,#drawing g.node.highlighted polygon,#drawing g.node.highlighted ellipse{stroke:#2b96cb!important;stroke-width:3!important}
+#drawing g.node.dimmed{opacity:.19}
+#drawing .function-scope{border:1px solid #b8cfdd}
+.board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:22px;min-width:0}
+.stage{border:1px solid #d5e2eb;border-radius:9px;padding:12px;background:#f9fcff}
+.stage strong{font-size:12px;display:block;margin-bottom:12px}
+.stage button{display:block;width:100%;border:1px solid #d4e2ed;border-radius:7px;background:#fff;color:#244e70;text-align:left;padding:10px 9px;margin:8px 0;font-size:12px;cursor:pointer}
+.stage button:hover{background:#e9f3fb;border-color:#a8c8da}
+.stage small{display:block;color:#6b8596;font-size:10px;line-height:1.4;margin-top:5px}
+aside h3{font-size:16px;line-height:1.4;margin:10px 0}aside .hint{font-size:12px;color:#667f94;line-height:1.6}
+aside .box{border:1px solid #e2e9ef;background:#fbfcfd;padding:11px;border-radius:7px;margin:12px 0;overflow-wrap:anywhere}
+aside .label{font-size:11px;color:#8497a5;font-weight:700;margin-bottom:7px}
+aside a{color:#2374a5;text-decoration:none;overflow-wrap:anywhere;font-size:12px}
+aside button{border:1px solid #dae5ec;background:#fff;color:#215a80;border-radius:7px;margin:4px 0;padding:8px;cursor:pointer}
+footer{font-size:11px;color:#788a9a}.hidden{display:none!important}
+@media(max-width:1050px){.layout{grid-template-columns:170px minmax(300px,1fr)}aside{grid-column:1/3;border-top:1px solid #e1e9ef;max-height:220px}nav{max-height:65vh}.board{grid-template-columns:1fr}}
+@media(max-width:620px){.app{height:auto;min-height:100vh}.layout{display:block}header{display:block}nav{border-right:0;border-bottom:1px solid #ddd;max-height:180px}article{min-height:70vh}#drawing{min-height:58vh}aside{max-height:none}.board{padding:12px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header><div><strong>Code-to-Flowchart · 分层算法流程</strong><small id="source"></small></div><small>离线文件 · 函数边界 / P 参数 / Δ 影响</small></header>
+<div class="layout">
+<nav><div class="section">业务 / 函数视图</div><div id="navigation"></div><div class="section">参数影响路径</div><div id="tracknav"></div></nav>
+<article>
+<div class="title"><div><h2 id="title"></h2><p id="subtitle"></p></div><button class="tool" id="back">← 返回</button></div>
+<div class="toolbar"><input id="search" aria-label="搜索节点" placeholder="搜索参数、节点或影响"><select id="parameters" aria-label="参数影响链"><option value="">全部参数</option></select><button class="tool" id="minus">−</button><button class="tool" id="plus">+</button><button class="tool" id="fit">全图</button><button class="tool" id="top">起点</button></div>
+<div id="drawing"></div>
+<footer>点击节点查看源码、参数来源与控制结果。滚轮上下浏览；Ctrl+滚轮缩放。</footer>
+</article>
+<aside id="inspector"></aside>
+</div></div>
+<script>
+"use strict";
+const VIEWS=__VIEWS_JSON__;
+const SVGS=__SVG_JSON__;
+const TRACKS=__TRACKS_JSON__;
+const SOURCE=__SOURCE_JSON__;
+const $=(id)=>document.getElementById(id);
+const byView=Object.fromEntries(VIEWS.map(v=>[v.key,v]));
+const historyStack=[];
+let active="overview",selected=null,selectedTrack="",query="",initialBox=null,box=null;
+$("source").textContent=(SOURCE.repository||"") +" @ "+(SOURCE.revision||"").slice(0,12);
+function elem(tag,text,cl){const e=document.createElement(tag);if(text!==undefined)e.textContent=String(text);if(cl)e.className=cl;return e;}
+function addButton(target,label,onClick,cl){const b=elem("button",label,cl||"");b.type="button";b.onclick=onClick;target.appendChild(b);return b;}
+function showMeta(){const v=byView[active];const a=$("inspector");a.replaceChildren(elem("div","所属函数 / 视图","label"),elem("h3",v.title),elem("p",v.purpose,"hint"));a.appendChild(elem("p","所有节点标注 P（参数）及 Δ（控制变量或输出）；未审查的间接因果关系不应自动推断。","hint"));}
+function showNode(id){
+ const v=byView[active],n=v.nodes.find(x=>x.id===id);if(!n)return;selected=id;
+ document.querySelectorAll("#drawing g.node").forEach(x=>x.classList.toggle("selected",x.id==="node-"+id));
+ const a=$("inspector");a.replaceChildren(elem("div","节点详情 · "+v.title,"label"),elem("h3",n.title));
+ const list=elem("div",undefined,"box");list.appendChild(elem("div","P · 参数影响","label"));
+ (n.params||[]).forEach(p=>{list.appendChild(elem("strong",p.name));list.appendChild(elem("p",p.controls,"hint"))});
+ if(!(n.params||[]).length)list.appendChild(elem("p","此节点无直接参数读取","hint"));a.appendChild(list);
+ const effect=elem("div",undefined,"box");effect.appendChild(elem("div","Δ · 变量 / 输出","label"));effect.appendChild(elem("p",n.impact,"hint"));a.appendChild(effect);
+ a.appendChild(elem("p",v.file+" : "+(n.source_lines||[]).join(", "),"hint"));
+ if(n.source_url){const link=elem("a","查看 GitHub 源码 ↗");link.href=n.source_url;link.target="_blank";link.rel="noopener noreferrer";a.appendChild(link)}
+ if(n.jump&&byView[n.jump])addButton(a,"展开 "+byView[n.jump].title+" →",()=>setView(n.jump,true));
+}
+function selectSvgNode(id){showNode(id);}
+function renderBoard(){
+ const v=byView.overview,map=Object.fromEntries(v.nodes.map(n=>[n.id,n])),wrap=elem("div",undefined,"board");
+ (v.stages||[]).forEach(s=>{const stage=elem("div",undefined,"stage");stage.appendChild(elem("strong",s.title));
+ const add=(item)=>{if(Array.isArray(item)){item.forEach(add);return}if(typeof item==="object")return;
+ const n=map[item];if(!n)return;const b=addButton(stage,n.title,()=>showNode(n.id));
+ b.dataset.node=n.id;b.appendChild(elem("small","P: "+(n.params||[]).map(x=>x.name).join(", ")));
+ b.appendChild(elem("small","Δ: "+n.impact));};(s.items||[]).forEach(add);wrap.appendChild(stage)});
+ return wrap;
+}
+function svg(){return $("drawing").querySelector("svg");}
+function readBox(){const s=svg();if(!s)return null;const b=s.getAttribute("viewBox")?.split(/[ ,]+/).map(Number);return b?.length===4?b:null;}
+function applyBox(){const s=svg();if(s&&box)s.setAttribute("viewBox",box.join(" "));}
+function fit(){if(initialBox)box=[...initialBox];applyBox();}
+function fitWidthTop(){const s=svg();if(!s||!initialBox)return;const r=$("drawing").getBoundingClientRect(),width=initialBox[2]*1.1,height=width*r.height/r.width;box=[initialBox[0],initialBox[1],width,height];applyBox();}
+function zoom(mult){if(!box)return;const w=box[2]*mult,h=box[3]*mult;box=[box[0]+(box[2]-w)/2,box[1]+(box[3]-h)/2,w,h];applyBox();}
+function refreshHighlights(){
+ const target=new Set(selectedTrack?(TRACKS.find(t=>t.key===selectedTrack)?.steps.filter(s=>s.view===active).map(s=>s.node)||[]):[]);
+ const q=query.toLowerCase();
+ document.querySelectorAll("#drawing .node").forEach(node=>{
+ const id=node.dataset.node||node.id.slice(5),n=byView[active].nodes.find(x=>x.id===id);
+ const matches=q&&n?(n.title+" "+n.impact+" "+(n.params||[]).map(p=>p.name+" "+p.controls).join(" ")).toLowerCase().includes(q):false;
+ const hilite=selectedTrack?target.has(id):Boolean(matches);
+ node.classList.toggle("highlighted",hilite);
+ node.classList.toggle("dimmed",Boolean(selectedTrack||q)&&!hilite);
+ });
+}
+function setView(key,remember=false){
+ if(!byView[key])return;if(remember&&active!==key)historyStack.push(active);
+ active=key;selected=null;$("title").textContent=byView[key].title;$("subtitle").textContent=byView[key].purpose;
+ $("drawing").classList.toggle("overview",key==="overview");$("drawing").replaceChildren();
+ initialBox=null;box=null;
+ if(key==="overview")$("drawing").appendChild(renderBoard());
+ else{$("drawing").innerHTML=SVGS[key]||"";initialBox=readBox();
+ if(initialBox)requestAnimationFrame(fitWidthTop);
+ document.querySelectorAll("#drawing g.node").forEach(g=>{g.tabIndex=0;g.setAttribute("role","button");
+ const id=g.id?.replace(/^node-/,"");g.onclick=()=>selectSvgNode(id);g.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();selectSvgNode(id)}};});}
+ document.querySelectorAll("#navigation button").forEach(b=>b.classList.toggle("active",b.dataset.view===key));
+ showMeta();refreshHighlights();
+}
+$("back").onclick=()=>setView(historyStack.pop()||"overview");
+$("minus").onclick=()=>zoom(1.2);$("plus").onclick=()=>zoom(.8);$("fit").onclick=fit;$("top").onclick=fitWidthTop;
+$("search").oninput=(ev)=>{query=ev.target.value.trim();refreshHighlights();};
+$("parameters").onchange=(ev)=>{selectedTrack=ev.target.value;refreshHighlights();const t=TRACKS.find(x=>x.key===selectedTrack);if(t){const a=$("inspector");a.replaceChildren(elem("h3",t.label),elem("p",t.summary,"hint"));(t.steps||[]).forEach((s,i)=>addButton(a,(i+1)+". "+(byView[s.view]?.title||s.view)+" · "+s.note,()=>{setView(s.view,true);showNode(s.node)}))}};
+$("drawing").addEventListener("wheel",e=>{if(!box)return;e.preventDefault();if(e.ctrlKey||e.metaKey)zoom(e.deltaY>0?1.15:.87);else{box[1]+=box[3]*e.deltaY/650;applyBox()}},{passive:false});
+VIEWS.forEach((v,i)=>{const b=addButton($("navigation"),(i===0?"总览 · ":"ƒ ")+v.title,()=>setView(v.key,true));b.dataset.view=v.key;});
+TRACKS.forEach(t=>{addButton($("tracknav"),t.label,()=>{selectedTrack=t.key;$("parameters").value=t.key;setView(t.steps?.[0]?.view||"overview",true);refreshHighlights()})});
+TRACKS.forEach(t=>{const op=elem("option",t.label);op.value=t.key;$("parameters").appendChild(op)});
+setView("overview");
+</script>
+</body></html>

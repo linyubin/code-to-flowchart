@@ -1,0 +1,223 @@
+{
+  "title": "Example: score threshold and result cap",
+  "source": {
+    "repository": "example/non-sensitive",
+    "revision": "educational-sample-v1",
+    "entry": "select_records"
+  },
+  "functions": [
+    {
+      "id": "main",
+      "name": "select_records",
+      "purpose": "config normalization and result size cap",
+      "file": "examples/sample_code.py",
+      "nodes": [
+        {
+          "id": "S0",
+          "kind": "start",
+          "title": "Receive records",
+          "params": [
+            {
+              "name": "records",
+              "controls": "input sequence of candidate records"
+            }
+          ],
+          "impact": "records enter selection",
+          "source_lines": [
+            1
+          ]
+        },
+        {
+          "id": "S1",
+          "kind": "action",
+          "title": "Read threshold and size cap",
+          "params": [
+            {
+              "name": "config.min_score",
+              "controls": "threshold default 50"
+            },
+            {
+              "name": "config.max_items",
+              "controls": "cap default 0 (unlimited)"
+            }
+          ],
+          "impact": "min_score;max_items",
+          "source_lines": [
+            2,
+            3
+          ]
+        },
+        {
+          "id": "S2",
+          "kind": "decision",
+          "title": "Was selected result empty?",
+          "params": [
+            {
+              "name": "valid",
+              "controls": "empty indicates no records meet min_score"
+            }
+          ],
+          "impact": "empty_or_continue",
+          "source_lines": [
+            5
+          ]
+        },
+        {
+          "id": "S3",
+          "kind": "decision",
+          "title": "Is positive cap specified?",
+          "params": [
+            {
+              "name": "max_items",
+              "controls": "positive truncates otherwise returns all"
+            }
+          ],
+          "impact": "enable_cap",
+          "source_lines": [
+            7
+          ]
+        },
+        {
+          "id": "S4",
+          "kind": "action",
+          "title": "Truncate selected records",
+          "params": [
+            {
+              "name": "max_items",
+              "controls": "result[:max_items]"
+            }
+          ],
+          "impact": "valid = valid[:max_items]",
+          "source_lines": [
+            8
+          ]
+        },
+        {
+          "id": "S5",
+          "kind": "terminal",
+          "title": "Return selected records",
+          "params": [],
+          "impact": "return valid",
+          "source_lines": [
+            9
+          ]
+        },
+        {
+          "id": "Sempty",
+          "kind": "terminal",
+          "title": "Return empty set",
+          "params": [],
+          "impact": "return []",
+          "source_lines": [
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "id": "helper",
+      "name": "select_valid",
+      "purpose": "filter records by score",
+      "file": "examples/sample_code.py",
+      "nodes": [
+        {
+          "id": "V0",
+          "kind": "decision",
+          "title": "Is input sequence empty?",
+          "params": [
+            {
+              "name": "records",
+              "controls": "no items to evaluate"
+            }
+          ],
+          "impact": "skip_filter",
+          "source_lines": [
+            13
+          ]
+        },
+        {
+          "id": "V1",
+          "kind": "action",
+          "title": "Select records above threshold",
+          "params": [
+            {
+              "name": "min_score",
+              "controls": "record.score >= min_score"
+            }
+          ],
+          "impact": "valid list filters low-scoring records",
+          "source_lines": [
+            15
+          ]
+        },
+        {
+          "id": "Vempty",
+          "kind": "terminal",
+          "title": "Return empty selection",
+          "params": [],
+          "impact": "return []",
+          "source_lines": [
+            14
+          ]
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "S0",
+      "to": "S1",
+      "label": "begin"
+    },
+    {
+      "from": "S1",
+      "to": "V0",
+      "label": "call helper"
+    },
+    {
+      "from": "V0",
+      "to": "Vempty",
+      "label": "yes"
+    },
+    {
+      "from": "V0",
+      "to": "V1",
+      "label": "no"
+    },
+    {
+      "from": "Vempty",
+      "to": "S2",
+      "label": "[]"
+    },
+    {
+      "from": "V1",
+      "to": "S2",
+      "label": "valid"
+    },
+    {
+      "from": "S2",
+      "to": "Sempty",
+      "label": "yes"
+    },
+    {
+      "from": "S2",
+      "to": "S3",
+      "label": "no"
+    },
+    {
+      "from": "S3",
+      "to": "S4",
+      "label": "yes"
+    },
+    {
+      "from": "S3",
+      "to": "S5",
+      "label": "no"
+    },
+    {
+      "from": "S4",
+      "to": "S5",
+      "label": "capped"
+    }
+  ]
+}

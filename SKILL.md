@@ -1,33 +1,29 @@
 ---
 name: code-to-flowchart
-description: Convert a function, method, or service's control flow — in any programming language — into a Mermaid flowchart diagram. Use when the user wants to visualize code logic, map a control flow, turn a method into a diagram, or understand a complex/branchy function visually.
+description: Trace actual code and generate function-scoped Mermaid workflows with parameter-to-variable causality, verifiable source lines, layered interactive diagrams, and measurable token usage. Use when asked to explain algorithms, visualize function business logic, or trace parameters through multiple functions.
 ---
 
 # Code to Flowchart
 
-Turns a function's real branching logic into a Mermaid `flowchart TD` that a reader can follow without reading the source. Language-agnostic — the steps below talk about decisions, side effects, and error-handling boundaries as concepts, not any one language's syntax.
+Analyze **actual source**, not names or docstrings. Default to **Level 2: expand core helper algorithms**. Output a business overview and linked function-level diagrams rather than one huge diagram. Preserve original code-to-flowchart behavior: explicit branches, errors, return paths and semantic step names.
 
-## Steps
+## Required accuracy
 
-1. **Identify the target function(s).** If a code-graph or indexing tool is available in this environment, use it to pull the exact source. Otherwise read/search the file directly with whatever file tools you have. Confirm with the user which function/entry point is in scope if it isn't obvious from context.
+- Record exact repository, commit, entry function, and consulted ranges. Detect source changes before reusing prior analysis. Never guess a call edge or a default.
+- Give each expanded function a labeled scope (`subgraph` for Mermaid, function view in interactive HTML).
+- Every process/decision node: `P:` parameters actually read/forwarded or `—`; `Δ:` the exact controlled variable, branch, mask, threshold, or output; include source line evidence in the ledger.
+- Distinguish argument forwarding, defaulting, overriding, omitted parameters, and fallback behavior. Separate call-site paths if the same helper is invoked differently.
+- No implicit loss of important failures/early returns. When a core helper is collapsed in the overview, link to its expanded detail view.
 
-2. **Trace the control flow top to bottom.** Walk the function and record, in order:
-   - every decision point (`if`/`else`, `switch`/`match`, loop condition, early return)
-   - every distinct action or side effect (DB call, network/IO call, external API/hardware call, state mutation)
-   - every error-handling boundary (`try`/`catch`, `except`, an `err != nil`/`Result` check, `panic`/`recover`, etc.) and what happens on failure
-   Skip pure logging statements and no-op lines — they add nodes without adding understanding.
+## Minimal workflow
 
-3. **Group into named steps.** Don't emit one node per source line. Collapse a straight-line run of statements that serves one purpose (e.g. "parse input", "look up record by key") into a single labeled node named for *what* it accomplishes, not *how*. Node count should scale with complexity, not line count. This is the step that keeps the diagram legible for any reader, not just someone who already knows the code: a 500-line function might collapse to ~15-30 nodes, a 50-line function to far fewer.
+1. **Scope:** Pin the repo commit and trace entry + core callees. For Python, optionally index local calls with `scripts/source_slice.py`, but treat dynamic/imported calls as unresolved. Read only relevant file/ranges; load `references/parameter-provenance.md` for complex parameters.
+2. **Model:** Build function-scoped JSON IR (schema by example in `examples/sample_flow.json`) with exact evidence. For long outputs, author **compact IR** using `scripts/compact_ir.py` format (details in `references/compact-ir-schema.md` and `references/token-optimization.md`); unpack before validation. Do not discard causality to save tokens.
+3. **Verify:** `python3 scripts/flowchart_ir.py IR.json --check`. Verify claims against code, especially numeric inequalities, early return precedence, and call-site parameter omissions.
+4. **Render locally:** `python3 scripts/incremental_pipeline.py IR.json --out-dir docs/diagrams --request "<task>" --usage-log docs/diagrams/usage.jsonl`. Optional `--viewer-spec VIEWS.json` renders a standalone HTML (Graphviz `dot` required). Re-render without involving an LLM on a valid, unchanged IR.
+5. **Measure:** Use `scripts/token_usage.py record --stage ... --usage-file <provider-usage.json> --provider openai|anthropic` for **exact model tokens**, if available. Without a provider usage response, pass prompt/response files and mark **estimate**. Never call estimated values actual billed tokens. Write `token_usage.py report --log ...`.
+6. **Deliver:** `.mmd`, `.md` parameter ledger and (if requested) `.html`; include which checks actually ran and known algorithm/dynamic-call limits. When source changed, regenerate/review the IR before regenerating diagrams.
 
-4. **Render as Mermaid.** Use `flowchart TD`:
-   - process steps: `A[Do the thing]`
-   - decisions: `B{Condition?}` with labeled edges — `B -->|Yes| C`, `B -->|No| D`
-   - terminal/exit states: distinct shape, e.g. `Z([Done])`
-   - error/failure paths: route through a visually distinct branch (e.g. prefix label `Error:` or a dedicated `classDef error` style) rather than interleaving them invisibly with the happy path
-   For a very large or high-complexity function, produce a high-level diagram of named steps first; only add a second, more detailed diagram for a specific branch if the user asks for it.
+**Security:** The tooling stores SHA-256/metadata in measurement logs, never source/prompt contents. Keep private-code-derived IR and HTML out of public skill repositories.
 
-5. **Write the output to a plain file**, not a hosted preview/canvas the tool might offer, as a `.md` with a fenced ```mermaid block. Default path: `docs/diagrams/<function-or-service-name>-flowchart.md` in the target project (create the folder if missing) — unless the user names a different location. Add one sentence above the fence naming the source file/function the diagram was traced from, so it doesn't go stale silently.
-
-## Completion criterion
-
-Every decision point and named step identified in step 2 appears as a node; every branch out of a decision node has a labeled edge; every error/catch path is visible, not merged into the happy path. Sanity-check the Mermaid syntax (balanced `[]`/`{}`/`()`, every edge references a declared node) before writing the file.
+Full standards: `references/parameter-provenance.md` (causality), `references/token-optimization.md` (metering/cache), `references/compact-ir-schema.md` (IR transport), and `references/full-procedure-v2.md` (detailed tracing contract). Tools use Python standard library; offline HTML generation additionally needs Graphviz at build time. The Skill does not itself call an LLM or guarantee access to model usage API metrics.

@@ -1,0 +1,37 @@
+name: Diagram IR and examples
+on:
+  push:
+  pull_request:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Graphviz
+        run: sudo apt-get update -qq && sudo apt-get install -y graphviz
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Validate and roundtrip canonical IR
+        run: |
+          python scripts/flowchart_ir.py examples/sample_flow.json --check
+          python scripts/compact_ir.py pack examples/sample_flow.json --out /tmp/sample.compact.json
+          python scripts/compact_ir.py unpack /tmp/sample.compact.json --out /tmp/sample.restored.json
+          python scripts/flowchart_ir.py /tmp/sample.restored.json --check
+      - name: Build offline viewer
+        run: |
+          python scripts/interactive_explorer.py examples/sample_explorer_spec.json --out /tmp/sample.html
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('/tmp/sample.html').read_text(encoding='utf-8')
+          assert '<script src=' not in s and 'cdn.jsdelivr' not in s
+          assert 'const TRACKS=' in s and 'function renderBoard()' in s
+          assert '<svg' in s and 'function-scope' in s
+          PY
+      - name: Cache hit and usage-report smoke
+        run: |
+          python scripts/incremental_pipeline.py examples/sample_flow.json --out-dir /tmp/output --request ci --usage-log /tmp/usage.jsonl
+          python scripts/incremental_pipeline.py examples/sample_flow.json --out-dir /tmp/output --request ci --usage-log /tmp/usage.jsonl
+          python scripts/token_usage.py report --log /tmp/usage.jsonl --out /tmp/usage.summary.json
